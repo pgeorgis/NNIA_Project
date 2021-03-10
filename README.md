@@ -44,7 +44,7 @@ For example:
 This command will load and tokenize the dataset using the BERT base cased tokenizer. 
 
 Optionally, one can include a maximum size of the dataset, e.g. 10000 sentences:
-`small_train = Dataset('dataset_train.tsv', max_size=10000)
+`small_train = Dataset('dataset_train.tsv', max_size=10000)`
 
 In this case, only the first 10000 entries (sentences) of the input .tsv will be stored. 
 
