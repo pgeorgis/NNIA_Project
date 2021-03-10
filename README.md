@@ -41,7 +41,14 @@ After running "load_dataset.py", we can load in a dataset by the command:
 For example:
 `train_set = Dataset('dataset_train.tsv')`
 
-This command will load and tokenize the dataset using the BERT base cased tokenizer. The result is stored in a pandas DataFrame object, accessible via the Dataset's "data" attribute, which contains columns of 'Sentences', 'Tags', 'Tokenized', 'Indices', and 'Length'.
+This command will load and tokenize the dataset using the BERT base cased tokenizer. 
+
+Optionally, one can include a maximum size of the dataset, e.g. 10000 sentences:
+`small_train = Dataset('dataset_train.tsv', max_size=10000)
+
+In this case, only the first 10000 entries (sentences) of the input .tsv will be stored. 
+
+The result is stored in a pandas DataFrame object, accessible via the Dataset's "data" attribute, which contains columns of 'Sentences', 'Tags', 'Tokenized', 'Indices', and 'Length'.
 
 * 'Sentences': the sentences of the dataset [list]
 * 'Tags': the POS tags for each word of the (untokenized) sentence [list]

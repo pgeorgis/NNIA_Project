@@ -1,4 +1,4 @@
-import torch, sys
+import torch
 from transformers import BertTokenizer, BertModel
 import pandas as pd
 import numpy as np
@@ -26,8 +26,9 @@ def pad_sentence(sentence, length, pad=0):
     
 
 class Dataset:
-    def __init__(self, file):
+    def __init__(self, file, max_size=None):
         self.filepath = file
+        self.max_size = max_size
         self.data = pd.DataFrame()
         
         print('Loading dataset...')
@@ -62,8 +63,14 @@ class Dataset:
             del POS_tags[-1]
         
         #Add sentences and POS tags to self.data Dataframe
-        self.data['Sentences'] = sentences
-        self.data['Tags'] = POS_tags
+        #If a maximum size N of the dataset has been specified, only take the first N sentences
+        if self.max_size != None:
+            self.data['Sentences'] = sentences[:self.max_size]
+            self.data['Tags'] = POS_tags[:self.max_size]
+        #Otherwise use the whole dataset
+        else:
+            self.data['Sentences'] = sentences
+            self.data['Tags'] = POS_tags
             
             
     def tokenize_sentences(self):
