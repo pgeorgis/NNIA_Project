@@ -5,8 +5,16 @@ channels:
 
 dependencies:
  - python=3.7
+ - numpy
+ - pandas
+ - transformers
+ - torch
 
 #Required packages already included in Python standard library:
 #collections
+#csv
+#json
 #operator
+#os
 #sys
+#random
