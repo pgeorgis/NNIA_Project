@@ -60,4 +60,6 @@ The sentences are not embedded automatically upon running the program. To achiev
 
 * batch_size: the number of sentences per batch, by default set at 100
 
-After the embedding completes (which takes some time), the results are stored in a column labeled 'Embeddings' of dataset.data [list of tensors].
+After the embedding completes (which takes some time), the full embedding results are stored in a column labeled 'Embeddings' of dataset.data [list of tensors]. However, this also includes embeddings for the [CLS] and [SEP] tags at the beginning and end, respectively, of tokenized sentences, and individual embeddings for each part of words which have been tokenized into multiple parts. 
+
+Instead, the column labeled 'Tagged Embeddings' of dataset.data [list of tuples (tag, embeddings)] contains the final embeddings matched to each POS tag for each sentence -- this is the input to the neural network model.
