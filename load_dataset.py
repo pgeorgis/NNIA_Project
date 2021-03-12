@@ -2,6 +2,7 @@ import torch
 from transformers import BertTokenizer, BertModel
 import pandas as pd
 import numpy as np
+from collections import defaultdict
 
 # Load pre-trained BERT tokenizer
 tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
@@ -23,6 +24,40 @@ def pad_sentence(sentence, length, pad=0):
     """Pads a list (sentence) with the specified pad character (default 0)
     until it reaches the specified length"""
     return sentence[:] + [pad]*(length-len(sentence))
+    
+
+def match_embeddings(tokens, tags, embeddings):
+    """Returns a list of tuples (tag, embeddings) given lists of tokens, POS
+    tags, and embeddings of the tokens""" 
+    
+    #Match tokens with their embeddings
+    #Ignore [CLS] and [SEP] tags at beginning and end of tokenized sentence
+    tokens_embeddings = [list(item) for item in list(zip(tokens[1:-1], embeddings[1:-1]))]
+    
+    #Iterate backwards through tokens, and average together the embeddings
+    #for words which were split into separate tokens (marked by '##' at start)
+    multitoken_words = defaultdict(lambda:1)
+    for i in range(len(tokens_embeddings)-1, -1, -1):
+        token = tokens_embeddings[i][0].split('##')
+        if len(token) > 1:
+            j = 1
+            while len(tokens_embeddings[i-j][0].split('##')) > 1:
+                j += 1
+            multitoken_words[j] += 1
+            embedding_i = tokens_embeddings[i][1]
+            tokens_embeddings[j][1] += embedding_i
+            
+        if i in multitoken_words:
+            tokens_embeddings[i][1] /= multitoken_words[i]
+        
+    #Match final embeddings to POS tags
+    final_embeddings = [tokens_embeddings[i][1] for i in range(len(tokens_embeddings)) 
+                        if i not in multitoken_words]
+    tagged_embeddings = list(zip(tags, final_embeddings))
+    
+    return tagged_embeddings
+    
+    
     
 
 class Dataset:
@@ -131,8 +166,17 @@ class Dataset:
                 final_layer = [token[-1] for token in sentence_embedding]
                 sentence_embeddings[sentence_ID] = final_layer
         
+        print('Saving embeddings...')
         #Save final embeddings to self.data DataFrame
         self.data['Embeddings'] = list(sentence_embeddings.values())
+        
+        #Match embeddings to POS tags
+        self.data['Tagged Embeddings'] = [match_embeddings(self.data['Tokenized'][i], 
+                                                             self.data['Tags'][i], 
+                                                             self.data['Embeddings'][i]) 
+                                             for i in range(self.n_sentences)]
   
+
+        
 
     
