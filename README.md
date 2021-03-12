@@ -1,5 +1,5 @@
-# CONLL POS Preprocessing
-> This project reads a concatenated .conll file and writes a .tsv file containing tokens and relevant POS annotations, along with a .info summary file containing general information about the dataset.
+# CONLL POS Classification
+> This project reads a concatenated .conll file and writes a .tsv file containing tokens and relevant part of speech (POS) annotations, along with a .info summary file containing general information about the dataset. Next, it uses a BERT model to create word embeddings for all sentences in the corpus, to be used as input for POS classification by an artificial neural network.
 
 ## Table of contents
 * [General Info](#general-info)
