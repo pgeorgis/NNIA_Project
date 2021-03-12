@@ -45,8 +45,7 @@ def match_embeddings(tokens, tags, embeddings):
             while len(tokens_embeddings[i-j][0].split('##')) > 1:
                 j += 1
             multitoken_words[j] += 1
-            embedding_i = tokens_embeddings[i][1]
-            tokens_embeddings[j][1] += embedding_i
+            tokens_embeddings[i-j][1] += tokens_embeddings[i][1]
             exclude.append(i)
             
         if i in multitoken_words:
