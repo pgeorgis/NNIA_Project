@@ -37,6 +37,7 @@ def match_embeddings(tokens, tags, embeddings):
     #Iterate backwards through tokens, and average together the embeddings
     #for words which were split into separate tokens (marked by '##' at start)
     multitoken_words = defaultdict(lambda:1)
+    exclude = []
     for i in range(len(tokens_embeddings)-1, -1, -1):
         token = tokens_embeddings[i][0].split('##')
         if len(token) > 1:
@@ -46,13 +47,14 @@ def match_embeddings(tokens, tags, embeddings):
             multitoken_words[j] += 1
             embedding_i = tokens_embeddings[i][1]
             tokens_embeddings[j][1] += embedding_i
+            exclude.append(i)
             
         if i in multitoken_words:
             tokens_embeddings[i][1] /= multitoken_words[i]
         
     #Match final embeddings to POS tags
     final_embeddings = [tokens_embeddings[i][1] for i in range(len(tokens_embeddings)) 
-                        if i not in multitoken_words]
+                        if i not in exclude]
     tagged_embeddings = list(zip(tags, final_embeddings))
     
     return tagged_embeddings
