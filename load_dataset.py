@@ -173,9 +173,12 @@ class Dataset:
         
         #Match embeddings to POS tags
         self.data['Tagged Embeddings'] = [match_embeddings(self.data['Tokenized'][i], 
-                                                             self.data['Tags'][i], 
-                                                             self.data['Embeddings'][i]) 
-                                             for i in range(self.n_sentences)]
+                                                    self.data['Tags'][i], 
+                                                    self.data['Embeddings'][i]) 
+                                   for i in range(self.n_sentences)]
+        
+        #Delete raw embeddings column to free up memory
+        del self.data['Embeddings']
   
 
         
