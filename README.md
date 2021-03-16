@@ -6,6 +6,8 @@
 * [Setup](#setup)
 * [Data Preprocessing](#data-preprocessing)
 * [Data Loading](#data-loading)
+* [Model Training](#model-training)
+* [Model Testing](#model-testing)
 
 ## General Info
 The goal of this project is ultimately to classify English word tokens according to their part of speech (POS). At this stage, the project preprocesses POS-annotated data from a .conll input file and summarizes the dataset. It additionally loads in the .tsv file generated from the preprocessing step and uses a BERT model to tokenize and create embeddings for the sentences.  
@@ -62,4 +64,25 @@ The sentences are not embedded automatically upon running the program. To achiev
 
 After the embedding completes (which takes some time), the full embedding results are stored in a column labeled 'Embeddings' of dataset.data [list of tensors]. However, this also includes embeddings for the [CLS] and [SEP] tags at the beginning and end, respectively, of tokenized sentences, and individual embeddings for each part of words which have been tokenized into multiple parts. 
 
-Instead, the column labeled 'Tagged Embeddings' of dataset.data [list of tuples (tag, embeddings)] contains the final embeddings matched to each POS tag for each sentence -- this is the input to the neural network model.
+Instead, the column labeled 'Tagged Embeddings' of dataset.data [list of tuples (tag, embeddings)] contains the final embeddings matched to each POS tag for each sentence -- this is the input to the neural network model. To free up memory, the 'Embeddings' column is removed after the 'Tagged Embeddings' column has been generated.
+
+## Model Training
+Two model architectures, a fully-connected feed-forward network and an LSTM network, are implemented. Thus far I have slightly modified the implementation of an online example of an LSTM, though I don't yet quite understand it. This is something I will work on in the next week.
+
+The `train()` function allows us to train a specified model given its optimizer, input features `X`, and output labels `y`. By default, the data are processed in batches of 100 sentences and trained over 20 epochs, though these settings are configurable when running the command. The function additionally records the training loss at each epoch, and stores these data in a model attribute. Optionally, the loss may be plotted by setting the parameter `plot_loss=True`. It is also possible to test the model's accuracy during the course of the training epochs by setting the parameter `test=True` and supplying test input features `X_test` and test output labels `y_test` (e.g. from the validation set). An example of the full syntax for running this command is shown below:
+
+`train(NN_model=lstm, optimizer=lstm_optimizer, X=train_X, y=train_y, epochs=20, batch_size=100, plot_loss=True, test=True, X_test=val_X, y_test=val_y)`
+
+## Model Testing
+The `test_model()` function allows us to test a particular model on specified data. By default, the accuracy is printed, but the function can be configured to return the accuracy value additionally or instead. An example function call is shown below:
+
+`test_model(NN_model=lstm, X_test=test_X, y_test=test_y, batch_size=500, print_results=True, return_results=False)`
+
+If during training the parameter `train=True` was selected, the train and test accuracies of a model can be easily plotted using the network's plot_accuracy() method, e.g.:
+
+`lstm.plot_accuracy()`
+
+Remaining to be done/implemented:
+* Commenting/understanding/tweaking the LSTM model
+* Training both models on training sets of varying sizes
+* Implementation for use from the command line via main() function, etc.
