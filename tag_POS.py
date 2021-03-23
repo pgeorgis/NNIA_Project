@@ -2,7 +2,7 @@
 from load_dataset import *
 
 #Load other modules
-import torch, math
+import torch, math, sys
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -182,7 +182,7 @@ class FCNet(Net):
         return F.log_softmax(x, dim=1)
     
 
-
+#LONG SHORT-TERM MEMORY NEURAL NETWORK MODEL
 class LSTMNet(Net):
     def __init__(self, name, input_size, hidden_size):
         super().__init__()
@@ -239,6 +239,14 @@ def train(NN_model, optimizer, X, y,
           epochs=20, batch_size=32,
           plot_loss=True, 
           test=False, X_test=None, y_test=None):
+    """Trains a specified neural network model using a specified optimizer,
+    training input X and output y, over a specified number of epochs and in 
+    batches of specified size. If plot_loss is set to True, a plot will be shown
+    at the end of training. If test==True and X_test and y_test arguments are supplied, 
+    the function additionally tests the model on the specified train and test data 
+    after each training epoch and saves the values to the model's train_accuracy
+    and test_accuracy attributes. Loss values are likewise saved to the model's
+    losses attribute."""
     
     #Raise error if no test data has been specified, if test == True
     if test == True:
@@ -327,6 +335,10 @@ def train(NN_model, optimizer, X, y,
 def test_model(NN_model, X_test, y_test,
                batch_size=500, confusion=True,
                print_results=True, return_results=False):
+    """Test a neural network model on specified test data consisting of input
+    features X_test and output labels y_test. 
+    If confusion == True, the model's confusion matrix attribute is updated with 
+    each prediction and gold label."""
     
     correct, total = 0, 0
     
@@ -371,12 +383,14 @@ def test_model(NN_model, X_test, y_test,
 
 
 #MODEL INITIALIZATION AND EVALUATION
-
 def evaluate_models(train_sizes, 
                     X_train=train_X, X_val=val_X, X_test=test_X,
                     y_train=train_y, y_val=val_y, y_test=test_y,
                     epochs=10, batch_size=32,
+                    directory = '', title='Model Accuracy by Training Set Size'
                     return_performance=True):
+    """Evaluates feed-forward and LSTM models using specified train, validation, 
+    and test sets, with specified sizes of the training dataset"""
     
     #Structures for storing trained models and evaluation results
     trained_models = {}
@@ -451,8 +465,8 @@ def evaluate_models(train_sizes,
     plt.ylabel('Accuracy')
     plt.ylim((0,1))
     plt.legend(loc='best')
-    plt.title('Model Accuracy by Training Set Size')
-    plt.savefig('Model Accuracy by Training Set Size', dpi=200)
+    plt.title(title)
+    plt.savefig(f'{directory}{title}', dpi=200)
     plt.show()
     plt.close()
     
@@ -460,7 +474,7 @@ def evaluate_models(train_sizes,
     if return_performance == True:
         return trained_models, train_accuracies, validation_accuracies, test_accuracies
 
-#Evaluate models on training subsets of varying sizes; save results and trained models
-results = evaluate_models(train_sizes=[100, 200, 500, 1000, 2000, 3000, 4000, 4900])
-trained_models, train_accuracies, validation_accuracies, test_accuracies = results
 
+#EXAMPLE EVALUATION USING TRAINING SUBSETS OF VARYING SIZES
+#results = evaluate_models(train_sizes=[100, 200, 500, 1000, 2000, 3000, 4000, 4900])
+#trained_models, train_accuracies, validation_accuracies, test_accuracies = results
