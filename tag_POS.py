@@ -127,13 +127,14 @@ class Net(nn.Module):
             indices = list(range(start_epoch, len(self.train_accuracy)))
         else:
             indices = list(range(start_epoch, end_epoch+1))
-        accuracies = [self.train_accuracy[i] for i in indices]
+        train_accuracies = [self.train_accuracy[i] for i in indices]
         plt.plot(indices, accuracies, label='Train')
         if validation == True:
             test_label = 'Validation'
         else:
             test_label = 'Test'
-        plt.plot(indices, self.test_accuracy, label=test_label)
+        test_accuracies = [self.test_accuracy[i] for i in indices]
+        plt.plot(indices, test_accuracies, label=test_label)
         plt.xlabel('Training Epochs')
         plt.ylabel('Accuracy')
         plt.legend(loc='best')
@@ -387,7 +388,7 @@ def evaluate_models(train_sizes,
                     X_train=train_X, X_val=val_X, X_test=test_X,
                     y_train=train_y, y_val=val_y, y_test=test_y,
                     epochs=10, batch_size=32,
-                    directory = '', title='Model Accuracy by Training Set Size'
+                    title='Model Accuracy by Training Set Size', save=True, directory = '',
                     return_performance=True):
     """Evaluates feed-forward and LSTM models using specified train, validation, 
     and test sets, with specified sizes of the training dataset"""
@@ -466,7 +467,8 @@ def evaluate_models(train_sizes,
     plt.ylim((0,1))
     plt.legend(loc='best')
     plt.title(title)
-    plt.savefig(f'{directory}{title}', dpi=200)
+    if save == True:
+        plt.savefig(f'{directory}{title}.png', dpi=200)
     plt.show()
     plt.close()
     
