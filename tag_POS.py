@@ -100,6 +100,8 @@ val_X, val_y = prepare_data('dataset_validation.tsv', max_size=1050)
 test_X, test_y = prepare_data('dataset_test.tsv', max_size=1050)
 
 
+#GENERAL NETWORK CLASS TEMPLATE
+#(containing attributes and methods for storing and plotting performance)
 class Net(nn.Module):
     def __init__(self):
         #Inherit methods and attributes of parent class
@@ -115,14 +117,34 @@ class Net(nn.Module):
         self.train_accuracy = []
         self.test_accuracy = []
         
-    def plot_accuracy(self, adjust=0):
-        plt.plot([i+adjust for i in range(len(self.train_accuracy))], self.train_accuracy, label='Train')
-        plt.plot([i+adjust for i in range(len(self.test_accuracy))], self.test_accuracy, label='Test')
+        #Confusion matrix of classification results
+        self.confusion = defaultdict(lambda:defaultdict(lambda:0))
+        
+    def plot_accuracy(self, start_epoch=0, end_epoch=-1, validation=True,
+                      title=None, directory=''):
+        """Generates a plot of the model's training and test accuracy"""
+        if end_epoch == -1:
+            indices = list(range(start_epoch, len(self.train_accuracy)))
+        else:
+            indices = list(range(start_epoch, end_epoch+1))
+        accuracies = [self.train_accuracy[i] for i in indices]
+        plt.plot(indices, accuracies, label='Train')
+        if validation == True:
+            test_label = 'Validation'
+        else:
+            test_label = 'Test'
+        plt.plot(indices, self.test_accuracy, label=test_label)
         plt.xlabel('Training Epochs')
         plt.ylabel('Accuracy')
         plt.legend(loc='best')
+        if title != None:
+            plt.title(title)
+            plt.savefig(f'{directory}{title}.png', dpi=100)
+        plt.show()
+        plt.close()
+            
 
-#FULLY CONNECTED NEURAL NETWORK MODEL
+#FULLY CONNECTED FEED-FORWARD NEURAL NETWORK MODEL
 class FCNet(Net):
     def __init__(self, name, input_size, hidden_size, output_size):
         #Inherit methods and attributes of parent Net class
@@ -158,11 +180,7 @@ class FCNet(Net):
         #Instead apply log softmax function to get (log) probability-like 
         #distribution over multiple output class labels
         return F.log_softmax(x, dim=1)
-     
-
-#768 input dimensions from BERT embeddings; output to next layer is 64 dimension
-fc_net = FCNet(name='Fully Connected NN', input_size=768, hidden_size=64, output_size=n_labels)
-fc_net_optimizer = optim.Adam(fc_net.parameters(), lr=0.001)
+    
 
 
 class LSTMNet(Net):
@@ -195,7 +213,8 @@ class LSTMNet(Net):
         HS = self.hidden_size
         for t in range(seq_sz):
             x_t = x[:, t, :]
-            # batch the computations into a single matrix multiplication
+            
+            #Batch the computations into a single matrix multiplication
             gates = x_t @ self.W + h_t @ self.U + self.bias
             i_t, f_t, g_t, o_t = (
                 torch.sigmoid(gates[:, :HS]), # input
@@ -207,19 +226,19 @@ class LSTMNet(Net):
             h_t = o_t * torch.tanh(c_t)
             hidden_seq.append(h_t.unsqueeze(0))
         hidden_seq = torch.cat(hidden_seq, dim=0)
-        # reshape from shape (sequence, batch, feature) to (batch, sequence, feature)
+        
+        #Reshape from shape (sequence, batch, feature) to (batch, sequence, feature)
         hidden_seq = hidden_seq.transpose(0, 1).contiguous()
+        
         return hidden_seq, (h_t, c_t)
 
-lstm = LSTMNet('LSTM', 768, 50)
-lstm_optimizer = optim.Adam(lstm.parameters(), lr=0.001)
 
+
+#MODEL TRAINING AND TESTING
 def train(NN_model, optimizer, X, y, 
-          epochs=20, batch_size=100,
+          epochs=20, batch_size=32,
           plot_loss=True, 
           test=False, X_test=None, y_test=None):
-    
-    
     
     #Raise error if no test data has been specified, if test == True
     if test == True:
@@ -234,6 +253,7 @@ def train(NN_model, optimizer, X, y,
             #Save these accuracy values
             NN_model.train_accuracy.append(train_acc)
             NN_model.test_accuracy.append(test_acc)
+            print(f'Initial accuracy: {round(train_acc*100, 2)}% (train), {round(test_acc*100, 2)}% (test)')
             
     #Split data into batches
     n_batches = max(round(len(X)/batch_size), 1)
@@ -243,7 +263,7 @@ def train(NN_model, optimizer, X, y,
     #Train NN model over specified number of epochs
     for epoch in range(epochs):
         
-        for i in range(n_batches):
+        for i in range(len(X_batches)):
             batch_input = X_batches[i]
             batch_labels = torch.flatten(y_batches[i])
             
@@ -272,17 +292,25 @@ def train(NN_model, optimizer, X, y,
         
         #If test == True, also test the model at the current epoch on both train and test data
         if test == True:
+            
+            #Create confusion matrix in final training epoch
+            confusion = False
+            if epoch == epochs-1:
+                confusion = True
+            
             #Get training and test accuracy at current epoch
-            train_acc = test_model(NN_model, X, y, return_results=True, print_results=False)
-            test_acc = test_model(NN_model, X_test, y_test, return_results=True, print_results=False)
+            train_acc = test_model(NN_model, X, y, return_results=True, print_results=False, confusion=confusion)
+            test_acc = test_model(NN_model, X_test, y_test, return_results=True, print_results=False, confusion=confusion)
             
             #Save these accuracy values
             NN_model.train_accuracy.append(train_acc)
             NN_model.test_accuracy.append(test_acc)
-            
+    
+    print(f'Final accuracy: {round(NN_model.train_accuracy[-1]*100, 2)}% (train), {round(NN_model.test_accuracy[-1]*100, 2)}% (test)')
+    
     #If plot_loss == True, then also display a plot of loss over training epochs        
     if plot_loss == True:
-        plt.plot(list(range(len(NN_model.losses))), NN_model.losses, label='Training Loss')
+        plt.plot(list(range(len(NN_model.losses)+1)), [None] + NN_model.losses, label='Training Loss')
         
         #If test == True, also plot the training and test accuracy on the same plot
         if ((test == True) and (X_test != None) and (y_test != None)):
@@ -291,10 +319,13 @@ def train(NN_model, optimizer, X, y,
         
         plt.xlabel('Epochs')
         plt.legend(loc='best')
+        plt.show()
+        plt.close()
+
 
 
 def test_model(NN_model, X_test, y_test,
-               batch_size=500, 
+               batch_size=500, confusion=True,
                print_results=True, return_results=False):
     
     correct, total = 0, 0
@@ -323,9 +354,13 @@ def test_model(NN_model, X_test, y_test,
             
             #Check whether model prediction is correct
             for index, j in enumerate(output):
-                if torch.argmax(j) == batch_labels[index]:
+                prediction = int(torch.argmax(j))
+                gold = int(batch_labels[index])
+                if prediction == gold:
                     correct += 1
                 total += 1
+                if confusion == True:
+                    NN_model.confusion[encoding_dict[gold]][encoding_dict[prediction]] += 1
     
     if print_results == True:
         print(f'Accuracy: {correct} correct of {total} ({round((correct/total)*100, 2)}%)')
@@ -334,8 +369,98 @@ def test_model(NN_model, X_test, y_test,
         return correct/total
 
 
-        
-def main():
-    pass
 
+#MODEL INITIALIZATION AND EVALUATION
+
+def evaluate_models(train_sizes, 
+                    X_train=train_X, X_val=val_X, X_test=test_X,
+                    y_train=train_y, y_val=val_y, y_test=test_y,
+                    epochs=10, batch_size=32,
+                    return_performance=True):
+    
+    #Structures for storing trained models and evaluation results
+    trained_models = {}
+    train_accuracies = {}
+    validation_accuracies = {}
+    test_accuracies = {}
+    
+    #Get performance of both models before any training
+    fc_net = FCNet(name='Feed-Forward Network', input_size=768, hidden_size=64, output_size=n_labels)
+    lstm = LSTMNet('LSTM Network', 768, 50)
+    pretrain_fcnet_train = test_model(fc_net, X_test=X_train, y_test=y_train, print_results=False, return_results=True)
+    pretrain_fcnet_test = test_model(fc_net, X_test=X_test, y_test=y_test, print_results=False, return_results=True)
+    pretrain_lstm_train = test_model(lstm, X_test=X_train, y_test=y_train, print_results=False, return_results=True)
+    pretrain_lstm_test = test_model(lstm, X_test=X_test, y_test=y_test, print_results=False, return_results=True)
+    train_accuracies[0] = pretrain_fcnet_train, pretrain_lstm_train
+    test_accuracies[0] = pretrain_fcnet_test, pretrain_lstm_test
+    
+    #Iterate through specified training sizes
+    for train_size in train_sizes:
+        
+        #Create subset of train set of specified size
+        sub_trainX = X_train[:train_size]
+        sub_trainY = y_train[:train_size]
+        
+        #Initialize the feed-forward model and its optimizer
+        fc_net = FCNet(name='Feed-Forward Network', input_size=768, hidden_size=64, output_size=n_labels)
+        fc_net_optimizer = optim.Adam(fc_net.parameters(), lr=0.001)
+        
+        #Train and evaluate the feed-forward model
+        print(f'\nTraining Feed-Forward Network model with {train_size} sentences...')
+        train(fc_net, fc_net_optimizer, X=sub_trainX, y=sub_trainY, 
+              test=True, X_test=X_val, y_test=y_val, 
+              epochs=epochs, batch_size=batch_size)
+        fc_net.plot_accuracy(title=f'Feed-Forward Network Performance (Train Size = {train_size})')
+        
+        print(f'Testing Feed-Forward Network model with {train_size} sentences...')
+        fc_test_acc = test_model(fc_net, X_test=X_test, y_test=y_test, return_results=True, print_results=True)
+        
+        #Initialize the LSTM model and its optimizer
+        lstm = LSTMNet('LSTM Network', 768, 50)
+        lstm_optimizer = optim.Adam(lstm.parameters(), lr=0.001)
+        
+        #Train and evaluate the LSTM model
+        print(f'\nTraining LSTM model with {train_size} sentences...')
+        train(lstm, lstm_optimizer, X=sub_trainX, y=sub_trainY, 
+              test=True, X_test=X_val, y_test=y_val, 
+              epochs=epochs, batch_size=batch_size)
+        lstm.plot_accuracy(title=f'LSTM Model Performance (Train Size = {train_size})')
+        
+        print(f'Testing LSTM model with {train_size} sentences...')
+        lstm_test_acc = test_model(lstm, X_test=test_X, y_test=test_y, return_results=True, print_results=True)
+        
+        #Save the accuracy scores
+        train_accuracies[train_size] = fc_net.train_accuracy[-1], lstm.train_accuracy[-1]
+        validation_accuracies[train_size] = fc_net.test_accuracy[-1], lstm.test_accuracy[-1]
+        test_accuracies[train_size] = fc_test_acc, lstm_test_acc
+        
+        #Save the trained models
+        trained_models[train_size] = fc_net, lstm
+    
+    #Plot model comparison results
+    x = list(train_accuracies.keys())
+    y_train_fc = [train_accuracies[size][0] for size in train_accuracies]
+    y_test_fc = [test_accuracies[size][0] for size in test_accuracies]
+    y_train_lstm = [train_accuracies[size][1] for size in train_accuracies]
+    y_test_lstm = [test_accuracies[size][1] for size in test_accuracies]
+    plt.plot(x, y_train_fc, label='Feed Forward Model (Train)')
+    plt.plot(x, y_test_fc, label='Feed Forward Model (Test)')
+    plt.plot(x, y_train_lstm, label='LSTM Model (Train)')
+    plt.plot(x, y_test_lstm, label='LSTM Model (Test)')
+    plt.xlabel('Training Set Size (# Sentences)')
+    plt.ylabel('Accuracy')
+    plt.ylim((0,1))
+    plt.legend(loc='best')
+    plt.title('Model Accuracy by Training Set Size')
+    plt.savefig('Model Accuracy by Training Set Size', dpi=200)
+    plt.show()
+    plt.close()
+    
+    #Return the evaluation scores and trained models
+    if return_performance == True:
+        return trained_models, train_accuracies, validation_accuracies, test_accuracies
+
+#Evaluate models on training subsets of varying sizes; save results and trained models
+results = evaluate_models(train_sizes=[100, 200, 500, 1000, 2000, 3000, 4000, 4900])
+trained_models, train_accuracies, validation_accuracies, test_accuracies = results
 
