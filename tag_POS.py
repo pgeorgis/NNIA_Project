@@ -128,7 +128,7 @@ class Net(nn.Module):
         else:
             indices = list(range(start_epoch, end_epoch+1))
         train_accuracies = [self.train_accuracy[i] for i in indices]
-        plt.plot(indices, accuracies, label='Train')
+        plt.plot(indices, train_accuracies, label='Train')
         if validation == True:
             test_label = 'Validation'
         else:
